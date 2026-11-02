@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f7f8fa">
+    <title>Paperplane PDF Editor</title>
+    <link rel="stylesheet" href="styles.css">
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+    <script defer src="app.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="Paperplane PDF Editor home">
+        <span class="brand-mark" aria-hidden="true">P</span>
+        <span>paperplane</span>
+        <span class="brand-tag">PDF editor</span>
+      </a>
+      <div class="topbar-actions">
+        <span class="privacy-note"><span class="privacy-dot"></span>Your files stay on your device</span>
+        <button class="button button-primary" id="download-button" type="button" disabled>
+          <span aria-hidden="true">↓</span> Download PDF
+        </button>
+      </div>
+    </header>
+
+    <main>
+      <section class="welcome" id="welcome">
+        <div class="welcome-copy">
+          <span class="eyebrow">A little editing goes a long way</span>
+          <h1>Make your PDF<br><span>your own.</span></h1>
+          <p>Add notes or cover up content, then save a fresh copy. Simple, private, and right in your browser.</p>
+          <ul class="feature-list">
+            <li><span aria-hidden="true">✓</span> Add text anywhere on a page</li>
+            <li><span aria-hidden="true">✓</span> Cover content with whiteout</li>
+            <li><span aria-hidden="true">✓</span> Download your edited PDF</li>
+          </ul>
+        </div>
+        <div class="upload-card" id="drop-zone">
+          <div class="upload-icon" aria-hidden="true">
+            <svg viewBox="0 0 48 48" fill="none">
+              <path d="M14 4.75h13l10 10v27.5H14a4 4 0 0 1-4-4v-29a4.5 4.5 0 0 1 4-4.5Z" stroke="currentColor" stroke-width="2"/>
+              <path d="M27 5v10h10M17 29h17M17 35h12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M5 18v-4m-2 2h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <h2>Start with a PDF</h2>
+          <p>Drop a file here, or choose one from your device.</p>
+          <button class="button button-primary upload-button" id="choose-file" type="button">Choose a PDF</button>
+          <input id="file-input" type="file" accept=".pdf,application/pdf" hidden>
+          <span class="file-note">PDF files only · Your file is never uploaded</span>
+          <p class="status-message" id="upload-status" role="status" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <section class="editor" id="editor" hidden>
+        <div class="editor-toolbar">
+          <div class="document-name">
+            <span class="pdf-badge">PDF</span>
+            <span id="file-name">document.pdf</span>
+            <button class="icon-button" id="replace-file" type="button" aria-label="Open another PDF" title="Open another PDF">↗</button>
+          </div>
+          <div class="toolbar-tools" role="group" aria-label="Editing tools">
+            <button class="tool-button is-active" id="select-tool" type="button" aria-pressed="true" title="Select tool">Select</button>
+            <button class="tool-button" id="text-tool" type="button" aria-pressed="false" title="Add text to a page">T <span>Text</span></button>
+            <button class="tool-button" id="whiteout-tool" type="button" aria-pressed="false" title="Draw a white cover over page content"><span class="whiteout-icon" aria-hidden="true"></span><span>Whiteout</span></button>
+          </div>
+          <div class="zoom-controls" aria-label="Zoom controls">
+            <button class="icon-button" id="zoom-out" type="button" aria-label="Zoom out" title="Zoom out">−</button>
+            <span id="zoom-label">100%</span>
+            <button class="icon-button" id="zoom-in" type="button" aria-label="Zoom in" title="Zoom in">+</button>
+          </div>
+        </div>
+
+        <div class="editor-body">
+          <section class="workspace" aria-label="PDF page preview">
+            <div class="page-controls">
+              <button class="icon-button" id="previous-page" type="button" aria-label="Previous page" title="Previous page">‹</button>
+              <span>Page <strong id="current-page">1</strong> of <strong id="page-count">1</strong></span>
+              <button class="icon-button" id="next-page" type="button" aria-label="Next page" title="Next page">›</button>
+            </div>
+            <div class="page-stage" id="page-stage">
+              <div class="page-wrap" id="page-wrap" hidden>
+                <div class="page-ruler page-ruler-top" id="ruler-top" aria-hidden="true"></div>
+                <div class="page-ruler page-ruler-left" id="ruler-left" aria-hidden="true"></div>
+                <canvas id="pdf-canvas" aria-label="Current PDF page"></canvas>
+                <div class="annotations-layer" id="annotations-layer" aria-hidden="true"></div>
+                <div class="interaction-layer" id="interaction-layer"></div>
+              </div>
+              <p class="status-message stage-status" id="stage-status" role="status" aria-live="polite"></p>
+            </div>
+          </section>
+
+          <aside class="side-panel">
+            <div class="panel-section">
+              <h2>Quick edits</h2>
+              <p class="panel-intro" id="tool-hint">Choose a tool, then click or drag on the page.</p>
+              <div class="text-options" id="text-options" hidden>
+                <label for="text-value">Text to add</label>
+                <input id="text-value" type="text" maxlength="300" placeholder="Type something to add…">
+                <label for="font-family">Font
+                  <select id="font-family">
+                    <option value="Helvetica">Arial / Helvetica</option>
+                    <option value="TimesRoman">Times New Roman</option>
+                    <option value="Courier">Courier New</option>
+                  </select>
+                </label>
+                <div class="text-style-controls" role="group" aria-label="Text style">
+                  <button class="style-toggle" id="bold-toggle" type="button" aria-pressed="false" aria-label="Bold" title="Bold"><strong>B</strong></button>
+                  <button class="style-toggle" id="italic-toggle" type="button" aria-pressed="false" aria-label="Italic" title="Italic"><em>I</em></button>
+                </div>
+                <div class="position-row">
+                  <label for="text-x">X position (pt)
+                    <input id="text-x" type="number" min="0" step="0.1" value="72">
+                  </label>
+                  <label for="text-y">Y position (pt)
+                    <input id="text-y" type="number" min="0" step="0.1" value="72">
+                  </label>
+                </div>
+                <button class="button button-position" id="match-font" type="button">Find similar font here</button>
+                <p class="font-match-status" id="font-match-status" role="status" aria-live="polite"></p>
+                <button class="button button-position" id="place-text" type="button">Add at position</button>
+                <p class="position-hint">Coordinates start at the page's top-left. Click the page to set a position. Font matches are the closest available, not exact embedded fonts.</p>
+                <div class="field-row">
+                  <label for="font-size">Size
+                    <select id="font-size">
+                      <option value="12">12 pt</option>
+                      <option value="16" selected>16 pt</option>
+                      <option value="20">20 pt</option>
+                      <option value="24">24 pt</option>
+                      <option value="32">32 pt</option>
+                      <option value="40">40 pt</option>
+                    </select>
+                  </label>
+                  <label for="text-color">Color
+                    <input id="text-color" type="color" value="#20252d" aria-label="Text color">
+                  </label>
+                </div>
+              </div>
+              <div class="tip-card" id="tool-tip">
+                <span class="tip-icon" aria-hidden="true">i</span>
+                <p>Edits are placed on top of the original page. Download a copy when you're ready.</p>
+              </div>
+            </div>
+            <div class="panel-section edits-section">
+              <div class="section-heading">
+                <h2>Edits</h2>
+                <span class="edit-count" id="edit-count">0</span>
+              </div>
+              <p class="empty-edits" id="empty-edits">Your edits will show up here.</p>
+              <ul class="edit-list" id="edit-list"></ul>
+            </div>
+            <p class="privacy-caption"><span aria-hidden="true">⌑</span> Everything happens locally in your browser.</p>
+          </aside>
+        </div>
+      </section>
+    </main>
+    <footer class="footer">Made for the little things you need to change.</footer>
+  </body>
+</html>
